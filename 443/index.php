@@ -60,7 +60,7 @@ $prefferedProblem = @$_GET['p'];
       </div><!-- /.container-fluid -->
     </nav>
 
-    <div class="jumbotron">
+    <div class="jumbotron" id="wrap">
       <div class="container" id="main-cont">
         <h1>TGH <small data-prefix=" úloha " class="problem-name"></small></h1>
 
@@ -131,6 +131,17 @@ $prefferedProblem = @$_GET['p'];
       </div>
     </div>
 
+    <footer class="footer">
+      <div class="container text-muted">
+        <div class="col-md-6">Připomínky zasílejte na jan.hybs (at) tul.cz</div>
+        <div class="text-right col-md-6">Veškerý provoz je <strong>monitorován</strong></div>
+      </div>
+    </footer>
+  </body>
+      
+
+
+
 
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
@@ -138,5 +149,4 @@ $prefferedProblem = @$_GET['p'];
     <script src="/js/bootstrap.min.js"></script>
     <script src="/js/highlight.pack.js"></script>
     <script src="/js/main.js"></script>
-  </body>
 </html>

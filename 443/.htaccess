@@ -1,3 +1,10 @@
-ErrorDocument 404 /errors/404.html
-ErrorDocument 403 /errors/404.html
-ErrorDocument 500 /errors/500.html
+RewriteEngine On
+#RewriteRule      result  result.php  [L]
+#RewriteRule      logout  logout.php  [L]
+#RewriteRule    secure  secure.php  [L]
+
+
+# RewriteEngine On
+# RewriteCond %{REQUEST_FILENAME} !-d
+# RewriteCond %{REQUEST_FILENAME} !-f
+# RewriteRule (.*) $1.php [L]

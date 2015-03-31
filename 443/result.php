@@ -1,10 +1,9 @@
 <?php session_start();
 
-require_once ("../config.php");
+require_once ("./config.php");
 require_once (ROOT . "/libs.php");
 
 $user = auth () or die ();
-echo "<pre>";
 
 
 
@@ -161,6 +160,13 @@ ob_start();
       </div>
     </div>
 
+
+    <footer class="footer">
+      <div class="container text-muted">
+        <div class="col-md-6">Připomínky zasílejte na jan.hybs (at) tul.cz</div>
+        <div class="text-right col-md-6">Veškerý provoz je <strong>monitorován</strong></div>
+      </div>
+    </footer>
 
 
     <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
