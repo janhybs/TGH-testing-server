@@ -6,7 +6,6 @@ require_once (ROOT . "/libs.php");
 $user = auth () or die ();
 
 
-
 $languages = getLanguages ();
 $problems = getProblems ();
 
@@ -32,34 +31,22 @@ $problemInfo = (object)$problems->$problem;
 
 
 # preparing paths
-$location = RESULT_ROOT . "/$problem/$username/";
+$location = DATA_ROOT . "/$problem/$username/";
 mkdirs ($location);
-
-
-
 $attemptNo = getNextAttempt ($location);
-$saveLoc = $location . formatLocation ($username, $problem, $attemptNo);
-$filename = "main.$langInfo->extension";
-$mainFileLoc = "$saveLoc/$filename";
-
-mkdirs ($saveLoc);
-saveFile ($mainFileLoc, $source);
+$sourceFilename = "main.$langInfo->extension";
 
 
 
 
+# jobs stuff
+$jobID = sprintf("%s_%s_%s", $username, microtime(true), rand(1, 10*1000));
+$jobDir = JOBS_ROOT . "/" . $jobID;
+mkdirs ($jobDir, 0777);
 
 
 ob_end_flush();
 ob_start();
-// set_time_limit(0);
-// error_reporting(0);
-
-// $scriptlocation = ROOT . '/scripts/test.py';
-// print shell_exec('python '. $scriptlocation);
-// $result = (object) process ($saveLoc, $filename, $user, $problemInfo, $langInfo, $attemptNo);
-// print_r ($result);
-
 ?>
 
 <!DOCTYPE html>
@@ -129,17 +116,28 @@ ob_start();
               // ob_start();
               ob_flush();
               flush();
-              $result = (object) process ($saveLoc, $filename, $user, $problemInfo, $langInfo, $attemptNo);
-              $lastLine = array_pop ($result->output);
-              $info = json_decode ($lastLine);             
-              if ($info === null) {
-                $info = (object)array('exit' => 1, 'outputs' => array());
-              }
-              if (sizeof ($result->output) < 5) {
-                  $result->output[] = $lastLine;
-              }
-              echo implode("\n", $result->output);
-              echo "<span id='exit-code' style='display: none;'>$info->exit</span>";
+              
+              # upon copy deamon will process files
+              $config = copyJobFiles($jobDir, $problemInfo, $langInfo, $user, $source, $attemptNo);
+              $result = waitForResult ($config->config, $config->result);
+
+              # output fix
+              if (!isset($result->outputs))
+                $result->outputs = array();
+              
+              if (!isset($result->suffix))
+                $result->suffix = 'E';
+
+              # post process
+              $resultDir  = $location . formatLocation ($username, $problem, $attemptNo) . '_' . $result->suffix;
+              mkdirs ($resultDir);
+
+
+              copyResultFiles ($jobDir, $resultDir, $sourceFilename, $result->result);
+              cleanJobFiles ($jobDir);
+
+              print ($result->result);
+              print ("<span id='exit-code' style='display: none;'>$result->exit</span>");
            ?></code></pre>
          </div>
 
@@ -147,8 +145,9 @@ ob_start();
           <div class="btn-group" role="group" aria-label="..." id="output-download">
             <?php
             $i = 0;
-            foreach ($info->outputs as $output) {
-                $path = str_replace (ROOT, '', $output->path);
+            foreach ($result->outputs as $output) {
+                $path = join_paths ($resultDir, 'output', $output->path);
+                $path = str_replace (ROOT, '', $path);
                 $cls = $output->exit == '0' ? 'success' : 'danger';
                 printf ("<a href='%s' class='btn btn-%s'>výstup sady %02d</a>", $path, $cls, ++$i);
             }
@@ -173,7 +172,8 @@ ob_start();
     <script type="text/javascript" src="/js/jquery-2.1.3.min.js"></script>
     <script type="text/javascript" src="/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="/js/highlight.pack.js"></script>
-    <script type="text/javascript" src="/js/result.js"></script>
+    <script type="text/javascript" src="/js/res.js"></script>
     <script type="text/javascript">hljs.initHighlighting()</script>
+
   </body>
 </html>

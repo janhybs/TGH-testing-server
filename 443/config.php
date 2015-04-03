@@ -1,6 +1,7 @@
 <?php
 define ('ROOT', realpath($_SERVER["DOCUMENT_ROOT"]));
-define ('RESULT_ROOT',  ROOT . "/data");
+define ('JOBS_ROOT',  ROOT . "/jobs");
+define ('DATA_ROOT',  ROOT . "/data");
 define ('PROBLEM_ROOT', ROOT . "/problems");
 define ('PYTHON_PATH', 'python2.7');
 define ('ALLOWED_USERS', serialize (array('jan.hybs', 'jan.brezina', 'jiri.hnidek', 'superego')));
@@ -22,7 +23,7 @@ function getLanguages () {
 
 function getProblems () {
     $v = array(
-        "TEST"      => array("id" => "TEST",     "name" => "pokusná úloha", "input" => array('1.in', '2.in')),
+        "TEST"      => array("id" => "TEST",     "name" => "pokusná úloha"), //, "input" => array('1.in', '2.in')
         "BIGLOKO1"  => array("id" => "BIGLOKO1", "name" => "Zeleznicni plan"),
         "MINOS"     => array("id" => "MINOS",    "name" => "Bludiste"),
         "MINSPILL"  => array("id" => "MINSPILL", "name" => "Přelévání nádob"),
