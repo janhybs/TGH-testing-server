@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# docker centos mod pyt
 
 import sys
 import os
@@ -9,6 +10,9 @@ import json
 import importlib
 import datetime
 import time
+import getpass
+from optparse import OptionParser
+from daemon import Daemon
 
 
 
@@ -96,18 +100,20 @@ class CommandResult (object):
 
 
 class Command (object):
-    def __init__(self, args, inn=None, out=None, err=None, shell=False):
-        self.args = args
-        self.timer = Timer(' '.join(args))
+    def __init__(self, args, inn=None, out=None, err=None):
+        # args.append ("exit") # terminate just in case
+        self.command = '; ' . join (args)
+        self.timer = Timer (self.command)
         self.process = None
         self.fatal_error = None
 
-        self.shell = shell
+        self.shell = True
         self.inn = self.inn_path = inn
         self.out = self.out_path = out
         self.err = self.err_path = err
 
         self.duration = 0
+        print self.command
         # print 'running: {} < {} > {} 2> {}'.format (' '.join (self.args), self.inn, self.out, self.err)
 
     def open_files (self):
@@ -122,7 +128,7 @@ class Command (object):
         if not self.err is PIPE: self.err.close ()
 
     def __repr__(self):
-        return "[Command: {}".format (' '.join (self.args))
+        return "[Command: {}".format (self.command)
 
     def run(self, timeout=MAX_DURATION):
 
@@ -130,7 +136,7 @@ class Command (object):
 
         def target():
             try:
-                self.process = Popen (self.args, stdout=self.out, stderr=self.err, stdin=self.inn, shell=self.shell)
+                self.process = Popen ([self.command], stdout=self.out, stderr=self.err, stdin=self.inn, shell=self.shell)
                 self.process.communicate ()
             except Exception as e:
                 # if shell is False exception can be thrown
@@ -161,7 +167,7 @@ class Command (object):
 
         # on error return error
         if self.fatal_error is not None:
-            return CommandResult (1, str(self.fatal_error), self)
+            return CommandResult (1, str (self.fatal_error), self)
 
 
         # return process if no FATAL error occurred
@@ -206,16 +212,7 @@ def enc (v):
     return v.encode ('utf-8')
 
 
-
-def main (config_path):
-    # load config
-    try:
-        with open(config_path, 'r') as config:
-            cfg = json.load (config, encoding="utf-8")
-    except Exception as e:
-        print e
-
-
+def process (cfg):
     # print cfg['lang']['id']
     # print cfg
     # print '------------------------------------'
@@ -223,10 +220,10 @@ def main (config_path):
     # dynamically get module
     lang            = cfg['lang']['id']
     problem         = cfg['problem']['id']
+    root            = cfg['root']
+    result_file     = cfg['result']
+    main_file       = os.path.join(root, cfg['filename'])
 
-    problem_root    = cfg['problem']['root']
-    result_root     = cfg['root']
-    main_file       = os.path.join(result_root, cfg['filename'])
 
     try:
         mod = get_module(lang)
@@ -234,42 +231,43 @@ def main (config_path):
         print e
 
 
+
     # get dirs
-    inn_dir     = os.path.join(problem_root, 'input')
-    ref_out_dir = os.path.join(problem_root, 'output')
-    res_out_dir = os.path.join(result_root, 'output')
-    res_err_dir = os.path.join(result_root, 'error')
+    inn_dir     = os.path.join(root, 'input')
+    ref_out_dir = os.path.join(root, 'ref')
+    res_out_dir = os.path.join(root, 'output')
+    res_err_dir = os.path.join(root, 'error')
 
     # get files
-    inn_files     = cfg['problem']['input'] if cfg['problem'].has_key ('input') else os.listdir (inn_dir)
+    inn_files     = cfg['problem']['input']
     ref_out_files = [os.path.join (ref_out_dir, change_ext (inn, '.out')) for inn in inn_files]
     res_out_files = [os.path.join (res_out_dir, change_ext (inn, '.out')) for inn in inn_files]
     res_err_files = [os.path.join (res_err_dir, change_ext (inn, '.err')) for inn in inn_files]
     inn_files     = [os.path.join (inn_dir, inn) for inn in inn_files]
 
-    if not os.path.exists(res_out_dir):
-        mkdirs (res_out_dir, 0o775)
-
-    if not os.path.exists(res_err_dir):
-        mkdirs (res_err_dir, 0o775)
-
-    # compilation
-    """@type CommandResult"""
-    comp_res = mod.compile (main_file, cfg)
+    # if not os.path.exists(res_out_dir):
+    #     mkdirs (res_out_dir, 0o775)
+    #
+    # if not os.path.exists(res_err_dir):
+    #     mkdirs (res_err_dir, 0o775)
 
     exec_res = []
     diff_res = []
-    result = ""
-    result += "{:12s} {} ({})\n".format ('uloha', enc (cfg['problem']['name']), problem)
-    result += "{:12s} {}\n".format ('jazyk',    lang)
-    result += "{:12s} {}\n".format ('student',  cfg['user']['username'])
-    result += "{:12s} {}\n".format ('datum',    datetime.datetime.now ())
-    result += "{:12s} {}.\n".format ('pokus',    cfg['attempt'])
+    result_msg = ""
+    result_msg += "{:12s} {} ({})\n".format ('uloha', enc (cfg['problem']['name']), problem)
+    result_msg += "{:12s} {}\n".format ('jazyk',    lang)
+    result_msg += "{:12s} {}\n".format ('student',  cfg['user']['username'])
+    result_msg += "{:12s} {}\n".format ('datum',    datetime.datetime.now ())
+    result_msg += "{:12s} {}.\n".format ('pokus',    cfg['attempt'])
 
-    result += '\n'
+    result_msg += '\n'
 
     errors = []
     outputs = []
+
+
+    # compilation
+    comp_res = mod.compile (main_file, cfg)
 
     if comp_res.isnotwrong ():
 
@@ -296,7 +294,7 @@ def main (config_path):
             diff_res.append (cur_diff_res)
 
 
-            result += "[{:2s}] {:2d}. sada: {:20s} {:6.3f} ms {:s} \n".format (
+            result_msg += "[{:2s}] {:2d}. sada: {:20s} {:6.3f} ms {:s} \n".format (
                 DIFF_OUTPUT_SHORT[str(cur_diff_res)], i+1,
                 os.path.basename(res_out_files[i]),
                 cur_exec_res.cmd.timer.duration * 1000,
@@ -305,45 +303,114 @@ def main (config_path):
 
 
     if comp_res.isnotwrong () and max(exec_res) == 0 and max(diff_res) == 0:
-        result += "\nodevzdane reseni je spravne\n"
+        result_msg += "\nodevzdane reseni je spravne\n"
         res_code = 0
     else:
-        result += "\nodevzdane reseni je chybne:\n"
+        result_msg += "\nodevzdane reseni je chybne:\n"
         res_code = 1
         if not comp_res.isnotwrong ():
-            result += "\tchyba pri kompilaci({}):\n{}\n".format (comp_res.exit, comp_res.error)
+            result_msg += "\tchyba pri kompilaci({}):\n{}\n".format (comp_res.exit, comp_res.error)
             res_code = 2
 
         if len (exec_res) and max (exec_res) != 0:
-            result += "\tchyba pri behu programu: kod ukonceni {:d}\n\t".format (max (exec_res))
-            result += "\n\t".join (errors)
+            result_msg += "\tchyba pri behu programu: kod ukonceni {:d}\n\t".format (max (exec_res))
+            result_msg += "\n\t".join (errors)
             res_code = 3
 
         if len (diff_res) and max (diff_res) != 0:
-            result += "\tchybny vystup"
+            result_msg += "\tchybny vystup"
             res_code = 4
 
-    # specify new result_root based on result exit
-    new_result_root = "{:s}_{:s}".format (result_root, RESULT_LETTER[str(res_code)])
+    result = {'exit': res_code, "outputs": outputs, 'suffix': RESULT_LETTER[str(res_code)], 'result': result_msg }
+    return (result_file, result)
 
-    with open (os.path.join(result_root, 'result.txt'), 'w') as f:
-        f.write (result)
+class TGHCheckDaemon(Daemon):
 
-    print result
+    def set_args (self, dir_to_watch, allow_root):
+        self.dir_to_watch = dir_to_watch
+        self.allow_root = allow_root
 
-    # fix paths to reflect end result
-    outputs = [{'path': os.path.join (new_result_root, 'output', output['path']), 'exit': output['exit']} for output in outputs]
-    php_info = {'exit': res_code, "outputs": outputs }
-    json.dump (php_info, sys.stdout)
+    def run(self):
+        while True:
+            jobs = os.listdir (self.dir_to_watch)
+            print jobs
+            for current_job in jobs:
+                config_path = os.path.join (self.dir_to_watch, current_job, 'config.json')
+                if os.path.exists (config_path) and os.path.isfile (config_path):
+                    print config_path
+                    try:
+                        with open (config_path, 'r') as f:
+                            config = json.load (f, encoding="utf-8")
+                    except Exception as e:
+                        print e
+
+                    if config:
+                        print 'valid job detected'
+                        try:
+                            (result_file, result) = process (config)
+                            print result['result']
+                            # write result
+                            with open (result_file, 'w') as f:
+                                json.dump (result, f, indent=True)
+                            os.chmod (result_file, 0o666)
+                        except Exception as e:
+                            print e
+
+                        # delete path as confirmation job is done
+                        os.remove (config_path)
+            time.sleep(2)
+
+# su - tgh-worker -c "python /var/www/html/443/scripts/process.py start /home/jan-hybs/PycharmProjects/TGH-testing-server/443/jobs"
+def usage (msg=None):
+    if msg is not None:
+        print msg
+    print "usage: %s start|stop|restart dir_to_watch [--force]" % sys.argv[0]
+    sys.exit(2)
+
+if __name__ == "__main__":
+    daemon = TGHCheckDaemon (pidfile='/tmp/tgh-runner.pid', name='TGH-Runner-D')
+    argl = len(sys.argv)
+
+    if argl < 2:
+        usage()
+
+    command = sys.argv[1]
+    if command == 'start' or command == 'restart':
+        if argl < 3:
+            usage('specify directory to watch')
+        else:
+            dir_to_watch = sys.argv[2]
+
+        if argl < 4:
+            allow_root = False
+        else:
+            allow_root = sys.argv[3] == '--force'
+        daemon.set_args (dir_to_watch, allow_root)
 
 
-    # try to rename folder
-    os.rename(result_root, new_result_root)
+        print 'Running as "{}"'.format (getpass.getuser())
+        print 'Watching dir "{}"'.format (dir_to_watch)
 
-if __name__ == '__main__':
-    try:
-        main (sys.argv[1])
+        if (os.getlogin() == 'root' or os.getuid() == 0) and allow_root is False:
+            print 'You cannot run this daemon as root'
+            print 'Use command su - <username> to run this daemon or add command --force if you are certain'
+            sys.exit(1)
+
+        if command == 'start':
+            daemon.start()
+        else:
+            daemon.restart ()
         sys.exit(0)
-    except Exception as e:
-        print e
-        sys.exit(1)
+
+
+    if command == 'stop':
+        daemon.stop()
+        sys.exit(0)
+
+    if command == 'restart':
+        daemon.restart ()
+        sys.exit(0)
+
+
+
+
