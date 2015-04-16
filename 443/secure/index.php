@@ -28,8 +28,9 @@ foreach ($details as $key)
 # manually parse eppn
 $user   = explode ('@', $_SERVER['eppn'], 2);
 $user[] = preg_split("/@$user[1];?/i", $_SERVER['affiliation'], -1, PREG_SPLIT_NO_EMPTY);
+$user[] = preg_replace('/([^\.]+)\.([^\.]+)/i', '${2}.${1}', $user[0]);
 
-$keys   = array ('username', 'domain', 'groups');
+$keys   = array ('username', 'domain', 'groups', 'nameuser');
 $user   = array_combine ($keys, $user);
 
 $_SESSION['user'] = (object) $user;

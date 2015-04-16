@@ -9,18 +9,18 @@ def compile (main_file, cfg):
     errput = os.path.join (root, 'error', 'compile.out')
     commands = [
         "cd '{:s}'".format (root),
-        "javac '{:s}'".format (main_file)
+        "{:s} '{:s}'".format (cfg['languages']['javac'], main_file)
     ]
     cmd = Command (commands, inn=None, out=output, err=errput)
 
-    return cmd.run ()
+    return cmd
 
 def run (comp_res, main_file, inn, out, err):
     (root, ext) = os.path.splitext (main_file)
     basedir = os.path.dirname (root)
     commands = [
-        "java -classpath '{:s}' main".format (basedir)
+        "{:s} -classpath '{:s}' main".format (cfg['languages']['java'], basedir)
     ]
     cmd = Command (commands, inn, out, err)
 
-    return cmd.run ()
+    return cmd

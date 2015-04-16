@@ -14,18 +14,28 @@ import getpass
 from optparse import OptionParser
 from daemon import Daemon
 
-
+parser = OptionParser()
+parser.add_option ("-f", "--force",  dest="force", action="store_true", default=False, help="start daemon even while running as root")
+parser.add_option ("-d", "--dir", dest="dir_to_watch", help="dir path which will be watched", metavar="DIR")
+parser.add_option ("-c", "--cfg", dest="languages", help="path to json file containing paths to programming languages", metavar="CFG")
+parser.set_usage ("%prog start|stop|restart --dir DIRNAME [options]")
 
 MAX_DURATION = 60
 DIFF_OUTPUT = {
     '0' : 'spravny-vystup',
     '1': 'chybny-vystup',
-    '2': 'zadny-vystup'
+    '2': 'zadny-vystup',
+    '3': 'chyba-pri-behu',
+    '4': 'chybny-vystup',
+    '5': 'prekrocen-casovy-limit'
 }
 DIFF_OUTPUT_SHORT = {
-    '0' : 'OK',
-    '1': 'ER',
-    '2': 'ER'
+    '0': 'OK', # accepted
+    '1': 'ER', # error
+    '2': 'CO', # compilation error
+    '3': 'ER', # run error
+    '4': 'WR', # wrong answer
+    '5': 'TI'  # timeout
 }
 RESULT_LETTER = {
     '0': 'A', # accepted
@@ -33,6 +43,17 @@ RESULT_LETTER = {
     '2': 'E', # compilation error
     '3': 'E', # run error
     '4': 'W'  # wrong answer
+}
+
+LANGUAGES = {
+    "python": "python", # python 27 path
+    "gmcs": "gmcs",     # cs compiler path
+    "mono": "mono",     # cs executor path
+    "javac": "javac",   # java compiler path
+    "java": "java",     # java executor path
+    "g++": "g++",       # c++ compiler path
+    "gcc": "gcc",       # c compiler path
+    "fpc": "fpc"        # pascal compiler path
 }
 
 
@@ -64,8 +85,6 @@ class Timer (object):
         if self.name is None:
             return "{:1.6f}".format(self.duration)
         return "{:s}: {:1.6f}".format(self.name, self.duration)
-
-
 
 
 
@@ -113,7 +132,8 @@ class Command (object):
         self.err = self.err_path = err
 
         self.duration = 0
-        print self.command
+        self.timeout = MAX_DURATION
+        self.terminated = False
         # print 'running: {} < {} > {} 2> {}'.format (' '.join (self.args), self.inn, self.out, self.err)
 
     def open_files (self):
@@ -128,10 +148,14 @@ class Command (object):
         if not self.err is PIPE: self.err.close ()
 
     def __repr__(self):
-        return "[Command: {}".format (self.command)
+        return "[Command: {} ({:d} s)]".format (self.command, self.timeout)
 
     def run(self, timeout=MAX_DURATION):
+        self.timeout = timeout
+        if not self.command:
+            return CommandResult ()
 
+        print self
         self.open_files ()
 
         def target():
@@ -153,12 +177,13 @@ class Command (object):
         # run thread
         self.timer.tick ()
         thread.start ()
-        thread.join (timeout)
+        thread.join (self.timeout)
         self.timer.tock ()
 
         # kill longer processes
         if thread.is_alive ():
             self.process.terminate ()
+            self.terminated = True
             thread.join ()
 
 
@@ -168,6 +193,10 @@ class Command (object):
         # on error return error
         if self.fatal_error is not None:
             return CommandResult (1, str (self.fatal_error), self)
+
+
+        if self.terminated:
+            return CommandResult (5, "Process was terminated (did not finish in time)", self)
 
 
         # return process if no FATAL error occurred
@@ -188,22 +217,29 @@ def mkdirs (path, mode):
 
 def compare (a, b):
     result = None
+    eof = False
     with open (a, 'rb') as f1, open (b, 'rb') as f2:
         while True:
-            l1 = f1.readline()
-            l2 = f2.readline()
 
-            while l1.isspace():
-                l1 = f1.readline()
+            # read lines
+            l1 = f1.readline ()
+            l2 = f2.readline ()
+            eof = l1 == ''
 
-            while l2.isspace():
-                l2 = f2.readline()
+            print l1, ': ', ':'.join(x.encode('hex') for x in l1)
+            print l2, ': ', ':'.join(x.encode('hex') for x in l2)
+
+            # right strip white chars (\r\n, \n, \r, max differ)
+            l1 = l1.rstrip()
+            l2 = l2.rstrip()
 
             if l1 == '' and l2 == '':
                 result = 0
-                break
 
-            if l1 != l2 or l1 == '' or l2 == '':
+                if eof:
+                    break
+
+            if l1 != l2:
                 result = 1
                 break
     return result
@@ -240,10 +276,11 @@ def process (cfg):
 
     # get files
     inn_files     = cfg['problem']['input']
-    ref_out_files = [os.path.join (ref_out_dir, change_ext (inn, '.out')) for inn in inn_files]
-    res_out_files = [os.path.join (res_out_dir, change_ext (inn, '.out')) for inn in inn_files]
-    res_err_files = [os.path.join (res_err_dir, change_ext (inn, '.err')) for inn in inn_files]
-    inn_files     = [os.path.join (inn_dir, inn) for inn in inn_files]
+    ref_out_files = [os.path.join (ref_out_dir, inn['id'] + '.out') for inn in inn_files]
+    res_out_files = [os.path.join (res_out_dir, inn['id'] + '.out') for inn in inn_files]
+    res_err_files = [os.path.join (res_err_dir, inn['id'] + '.err') for inn in inn_files]
+    # inn_files     = [os.path.join (inn_dir,     inn['id'] + '.in')  for inn in inn_files]
+    for inn in inn_files: inn['path'] = os.path.join(inn_dir, inn['id'] + '.in')
 
     # if not os.path.exists(res_out_dir):
     #     mkdirs (res_out_dir, 0o775)
@@ -267,7 +304,9 @@ def process (cfg):
 
 
     # compilation
-    comp_res = mod.compile (main_file, cfg)
+    comp_cmd = mod.compile (main_file, cfg)
+    comp_res = comp_cmd.run (MAX_DURATION)
+    cur_exec_res = None
 
     if comp_res.isnotwrong ():
 
@@ -275,9 +314,9 @@ def process (cfg):
         for i in range(len(inn_files)):
             # run
 
-
-            cur_exec_res = mod.run (comp_res, main_file, inn_files[i], res_out_files[i], res_err_files[i])
-
+            print inn_files[i]
+            cur_exec_cmd = mod.run (comp_res, main_file, cfg, inn_files[i]['path'], res_out_files[i], res_err_files[i])
+            cur_exec_res = cur_exec_cmd.run (inn_files[i]['time'])
 
             # append details
             exec_res.append (cur_exec_res.exit)
@@ -285,20 +324,30 @@ def process (cfg):
 
 
 
+            result_string_short = 'ER'
+            result_string_long = 'Error'
             # compare outputs
             if cur_exec_res.isok ():
                 cur_diff_res = compare (res_out_files[i], ref_out_files[i])
+                result_string_short = DIFF_OUTPUT_SHORT[str(cur_diff_res)]
+                result_string_long  = DIFF_OUTPUT[str(cur_diff_res)]
             else:
                 cur_diff_res = 2
+                try:                result_string_short = DIFF_OUTPUT_SHORT[str(cur_exec_res.exit)]
+                except Exception:   result_string_short = 'ER'
+
+                try:                result_string_long = DIFF_OUTPUT[str(cur_exec_res.exit)]
+                except Exception:   result_string_long = 'Error'
+
             outputs.append({'path': os.path.basename(res_out_files[i]), 'exit': max([cur_exec_res.exit, cur_diff_res])})
             diff_res.append (cur_diff_res)
 
 
             result_msg += "[{:2s}] {:2d}. sada: {:20s} {:6.3f} ms {:s} \n".format (
-                DIFF_OUTPUT_SHORT[str(cur_diff_res)], i+1,
+                result_string_short, i+1,
                 os.path.basename(res_out_files[i]),
                 cur_exec_res.cmd.timer.duration * 1000,
-                DIFF_OUTPUT[str(cur_diff_res)]
+                result_string_long
             )
 
 
@@ -337,10 +386,10 @@ class TGHCheckDaemon(Daemon):
             for current_job in jobs:
                 config_path = os.path.join (self.dir_to_watch, current_job, 'config.json')
                 if os.path.exists (config_path) and os.path.isfile (config_path):
-                    print config_path
                     try:
                         with open (config_path, 'r') as f:
                             config = json.load (f, encoding="utf-8")
+                            config['languages'] = LANGUAGES
                     except Exception as e:
                         print e
 
@@ -358,6 +407,7 @@ class TGHCheckDaemon(Daemon):
 
                         # delete path as confirmation job is done
                         os.remove (config_path)
+                        # sys.exit (0)
             time.sleep(2)
 
 # su - tgh-worker -c "python /var/www/html/443/scripts/process.py start /home/jan-hybs/PycharmProjects/TGH-testing-server/443/jobs"
@@ -367,50 +417,44 @@ def usage (msg=None):
     print "usage: %s start|stop|restart dir_to_watch [--force]" % sys.argv[0]
     sys.exit(2)
 
-if __name__ == "__main__":
+if __name__ == "__main__a":
+    (options, args) = parser.parse_args()
+    
+    if options.dir_to_watch is None or not args:
+        parser.print_usage ()
+        sys.exit (1)
+    
+    options.dir_to_watch = os.path.abspath (options.dir_to_watch)
+    
+    print 'Running as "{}"'.format (getpass.getuser())
+    print 'Watching dir "{}"'.format (options.dir_to_watch)
+
+    if (getpass.getuser() == 'root' or os.getuid() == 0) and options.force is False:
+        print 'You cannot run this daemon as root'
+        print 'Use command su - <username> to run this daemon or add command --force if you are certain'
+        sys.exit(1)
+
+    if options.languages is not None:
+        with open (options.languages) as f:
+            LANGUAGES = json.load (f)
+    
+    
+    
     daemon = TGHCheckDaemon (pidfile='/tmp/tgh-runner.pid', name='TGH-Runner-D')
-    argl = len(sys.argv)
 
-    if argl < 2:
-        usage()
-
-    command = sys.argv[1]
-    if command == 'start' or command == 'restart':
-        if argl < 3:
-            usage('specify directory to watch')
-        else:
-            dir_to_watch = sys.argv[2]
-
-        if argl < 4:
-            allow_root = False
-        else:
-            allow_root = sys.argv[3] == '--force'
-        daemon.set_args (dir_to_watch, allow_root)
-
-
-        print 'Running as "{}"'.format (getpass.getuser())
-        print 'Watching dir "{}"'.format (dir_to_watch)
-
-        if (os.getlogin() == 'root' or os.getuid() == 0) and allow_root is False:
-            print 'You cannot run this daemon as root'
-            print 'Use command su - <username> to run this daemon or add command --force if you are certain'
-            sys.exit(1)
-
-        if command == 'start':
-            daemon.start()
-        else:
-            daemon.restart ()
-        sys.exit(0)
-
-
-    if command == 'stop':
-        daemon.stop()
-        sys.exit(0)
-
-    if command == 'restart':
+    if args[0] == 'start':
+        daemon.set_args (options.dir_to_watch, options.force)
+        daemon.start ()
+    elif args[0] == 'restart':
+        daemon.set_args (options.dir_to_watch, options.force)
         daemon.restart ()
-        sys.exit(0)
+    elif args[0] == 'stop':
+        daemon.stop ()
+    elif args[0] == 'debug':
+        daemon.set_args (options.dir_to_watch, options.force)
+        daemon.run ()
+    sys.exit (0)
 
-
-
-
+if __name__ == "__main__":
+    # print compare ('../tst/1.out', '../tst/11.out')
+    print compare ('../tst/2.out', '../tst/22.out')

@@ -5,6 +5,7 @@ define ('DATA_ROOT',  ROOT . "/data");
 define ('PROBLEM_ROOT', ROOT . "/problems");
 define ('PYTHON_PATH', 'python2.7');
 define ('ALLOWED_USERS', serialize (array('jan.hybs', 'jan.brezina', 'jiri.hnidek', 'superego')));
+$jsonProblems = FALSE;
 
 function arrayToObject ($array) { return json_decode (json_encode ($array));}
 
@@ -22,22 +23,14 @@ function getLanguages () {
 
 
 function getProblems () {
-    $v = array(
-        "TEST"      => array("id" => "TEST",     "name" => "pokusná úloha"), //, "input" => array('1.in', '2.in')
-        "BIGLOKO1"  => array("id" => "BIGLOKO1", "name" => "Zeleznicni plan"),
-        "MINOS"     => array("id" => "MINOS",    "name" => "Bludiste"),
-        "MINSPILL"  => array("id" => "MINSPILL", "name" => "Přelévání nádob"),
-        "WEBISL"    => array("id" => "WEBISL",   "name" => "Web stranky"),
-        "ELECTRIC"  => array("id" => "ELECTRIC", "name" => "Eletrika"),
-        "SUDOGOB"   => array("id" => "SUDOGOB",  "name" => "Sudkou"),
-        "IDOS"      => array("id" => "IDOS",     "name" => "IDOS"),
-        "SEGMENT"   => array("id" => "SEGMENT",  "name" => "Segmentace obrazu"),
-        "RELCONN"   => array("id" => "RELCONN",  "name" => "Nejspolehlivejsi cesta"),
-        "ARRMERGE"  => array("id" => "ARRMERGE", "name" => "Merge two sorted arrays"),
-        "GOSTRVI"   => array("id" => "GOSTRVI",  "name" => "Google Street View"),
-        "TWOMISS"   => array("id" => "TWOMISS",  "name" => "Two missing from a sequence")
-    );
-    return arrayToObject($v);
+    global $jsonProblems;
+    
+    if ($jsonProblems !== FALSE)
+        return $jsonProblems;
+
+    $data = file_get_contents (ROOT . '/cfg/problems.json');
+    $jsonProblems = json_decode ($data);
+    return $jsonProblems;
 }
 
 

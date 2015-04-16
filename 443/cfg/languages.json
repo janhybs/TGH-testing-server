@@ -1,0 +1,10 @@
+{
+  "python": "pyhton",
+  "gmcs": "gmcs",
+  "mono": "mono",
+  "javac": "javac",
+  "java": "java",
+  "g++": "g++",
+  "gcc": "gcc",
+  "fpc": "fpc"
+}

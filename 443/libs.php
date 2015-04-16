@@ -93,7 +93,12 @@ function copyJobFiles ($jobDir, $problemInfo, $langInfo, $user, $source, $attemp
     $problemInputDir    = join_paths ($problemDir, 'input');
     $problemOutputDir   = join_paths ($problemDir, 'output');
 
-    $inputNames         = isset ($problemInfo->input) ? $problemInfo->input : scandir ($problemInputDir);
+    $inputNamesObj      = $problemInfo->input;
+    $inputNames         = array ();
+    foreach ($inputNamesObj as $inputName) {
+        $inputNames[] = $inputName->id . '.in';
+    }
+
     $inputNames         = array_diff ($inputNames, array('.', '..'));
     $inputNames         = array_values ($inputNames);
 
@@ -131,7 +136,7 @@ function copyJobFiles ($jobDir, $problemInfo, $langInfo, $user, $source, $attemp
     $json->user     = $user;
     $json->lang     = $langInfo;
     $json->problem  = $problemInfo;
-    $json->problem->input = $inputNames;
+    $json->problem->input = $problemInfo->input;
   
     $json_data = utf8_encode (json_encode($json));
     file_put_contents($configFile, $json_data);
@@ -184,7 +189,7 @@ function copyResultFiles ($jobDir, $resultDir, $sourceFilename, $resultText) {
 function waitForResult ($configLoc, $resultLoc) {
     $wait = 0;
     $sleep = .25;
-    while ($wait < 600) {
+    while ($wait < 60) {
         if (file_exists ($configLoc)) {
             # monitor present of config.json
 

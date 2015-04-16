@@ -1,6 +1,6 @@
 <?php session_start();
 
-require_once ("./config.php");
+require_once ("./cfg/config.php");
 require_once (ROOT . "/libs.php");
 
 $user = auth () or die ();
@@ -31,7 +31,7 @@ $problemInfo = (object)$problems->$problem;
 
 
 # preparing paths
-$location = DATA_ROOT . "/$problem/$username/";
+$location = join_paths (DATA_ROOT, $user->nameuser, $problem);
 mkdirs ($location);
 $attemptNo = getNextAttempt ($location);
 $sourceFilename = "main.$langInfo->extension";
@@ -109,7 +109,7 @@ ob_start();
         </div>
 
 
-        <div class="alert alert-success" role="alert" id="output-holder" style="display: none;">
+        <div class="alert alert-success" role="alert" id="output-holder" style="display: block;">
           <strong id="output-header"></strong>
           <pre id="output"><code class="nohighlight"><?php 
               // ob_implicit_flush(1);
@@ -129,7 +129,7 @@ ob_start();
                 $result->suffix = 'E';
 
               # post process
-              $resultDir  = $location . formatLocation ($username, $problem, $attemptNo) . '_' . $result->suffix;
+              $resultDir  = join_paths ($location, formatLocation ($username, $problem, $attemptNo) . '_' . $result->suffix);
               mkdirs ($resultDir);
 
 

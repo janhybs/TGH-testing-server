@@ -1,13 +1,13 @@
 __author__ = 'jan-hybs'
 from process import Command, CommandResult
-
+import sys
 def compile (main_file, cfg):
-    return CommandResult()
+    return Command([])
 
-def run (comp_res, main_file, inn, out, err):
+def run (comp_res, main_file, cfg, inn, out, err):
     commands = [
-        "python '{:s}'".format (main_file)
+        "{:s} '{:s}'".format (cfg['languages']['python'], main_file)
     ]
     cmd = Command (commands, inn, out, err)
 
-    return cmd.run ()
+    return cmd
