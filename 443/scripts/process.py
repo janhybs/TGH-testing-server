@@ -417,7 +417,7 @@ def usage (msg=None):
     print "usage: %s start|stop|restart dir_to_watch [--force]" % sys.argv[0]
     sys.exit(2)
 
-if __name__ == "__main__a":
+if __name__ == "__main__":
     (options, args) = parser.parse_args()
     
     if options.dir_to_watch is None or not args:
@@ -454,7 +454,3 @@ if __name__ == "__main__a":
         daemon.set_args (options.dir_to_watch, options.force)
         daemon.run ()
     sys.exit (0)
-
-if __name__ == "__main__":
-    # print compare ('../tst/1.out', '../tst/11.out')
-    print compare ('../tst/2.out', '../tst/22.out')
