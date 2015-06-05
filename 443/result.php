@@ -16,6 +16,14 @@ $problem = @$_POST['selected-problem'];
 $source = @$_POST['source-code'];
 $username = $user->username;
 
+# save recent source-code task and more
+$history = (object)array();
+$history->source    = $source;
+$history->lang      = $lang;
+$history->problem   = $problem;
+$_SESSION['history'] = $history;
+
+
 if (! isset ($_POST['selected-language'], $_POST['selected-problem'], $_POST['source-code']))
   header("Location: /");
 
@@ -43,6 +51,7 @@ $sourceFilename = "main.$langInfo->extension";
 $jobID = sprintf("%s_%s_%s", $username, microtime(true), rand(1, 10*1000));
 $jobDir = JOBS_ROOT . "/" . $jobID;
 mkdirs ($jobDir, 0777);
+
 
 
 ob_end_flush();
@@ -97,7 +106,11 @@ ob_start();
 
     <div class="jumbotron">
       <div class="container" id="main-cont">
-        <h1>TGH <small data-prefix=" úloha " class="problem-name"></small></h1>
+        <h1><a href='/?h' title="Upravit zdrojový kód" class="btn btn-default btn-lg">
+              <span class="glyphicon glyphicon-chevron-left" aria-hidden="true">
+            </a>
+            TGH <small data-prefix=" úloha " class="problem-name"><?php echo $problemInfo->id; ?></small>
+        </h1>
 
 
         <div class="well" id="processing">Probíhá zpracování...
@@ -107,6 +120,8 @@ ob_start();
             </div>
           </div>
         </div>
+
+        <!-- <pre id="code"><code class="<?php echo $langInfo->id; ?>"><?php echo $source; ?></code></pre> -->
 
 
         <div class="alert alert-success" role="alert" id="output-holder" style="display: block;">
@@ -146,10 +161,10 @@ ob_start();
             <?php
             $i = 0;
             foreach ($result->outputs as $output) {
-                $path = join_paths ($resultDir, 'output', $output->path);
-                $path = str_replace (ROOT, '', $path);
+                $serverpath = join_paths ($resultDir, $output->path);
+                $wwwpath = str_replace (ROOT, '', $serverpath);
                 $cls = $output->exit == '0' ? 'success' : 'danger';
-                printf ("<a href='%s' class='btn btn-%s'>výstup sady %02d</a>", $path, $cls, ++$i);
+                printf ("<a href='%s' class='btn btn-%s'>výstup sady %02d <br />%s</a>", $wwwpath, $cls, ++$i, getFileSizeString($serverpath));
             }
             ?>
           </div>
@@ -172,8 +187,8 @@ ob_start();
     <script type="text/javascript" src="/js/jquery-2.1.3.min.js"></script>
     <script type="text/javascript" src="/js/bootstrap.min.js"></script>
     <script type="text/javascript" src="/js/highlight.pack.js"></script>
-    <script type="text/javascript" src="/js/res.js"></script>
     <script type="text/javascript">hljs.initHighlighting()</script>
+    <script type="text/javascript" src="/js/res.js"></script>
 
   </body>
 </html>

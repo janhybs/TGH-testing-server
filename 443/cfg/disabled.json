@@ -1,0 +1,43 @@
+    "BIGLOKO1": {
+        "id": "BIGLOKO1",
+        "name": "Zeleznicni plan",
+        "ref_script": "..\/generic",
+        "input": [
+            {
+                "id": "BIGLOKO1_0",
+                "time": 60
+            },
+            {
+                "id": "BIGLOKO1_1",
+                "time": 60
+            }
+        ]
+    },
+    "WEBISL": {
+        "id": "WEBISL",
+        "name": "Web stranky",
+        "ref_script": "..\/generic",
+        "enabled": 0,
+        "input": [
+            {
+                "id": "WEBISL_0",
+                "time": 60
+            },
+            {
+                "id": "WEBISL_1",
+                "time": 60
+            },
+            {
+                "id": "WEBISL_2",
+                "time": 60
+            },
+            {
+                "id": "WEBISL_3",
+                "time": 60
+            },
+            {
+                "id": "WEBISL_4",
+                "time": 60
+            }
+        ]
+    }

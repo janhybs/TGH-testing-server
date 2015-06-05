@@ -11,7 +11,19 @@ $errors = array(
     'problem' => 'Neznámá úloha'
 );
 $error = @$errors[@$_GET['e']];
-$prefferedProblem = @$_GET['p'];
+
+$prefferedProblem   = @$_GET['p'];
+$prefferedLang      = @$_GET['l'];
+$prefferedSource    = @$_GET['s'];
+
+# history flag overrides
+if (isset($_GET['h'])) {
+    $history = @$_SESSION['history'];
+    $prefferedProblem   = @$history->problem;
+    $prefferedLang      = @$history->lang;
+    $prefferedSource    = @$history->source;
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -104,7 +116,7 @@ $prefferedProblem = @$_GET['p'];
                 <select id="selected-language" name="selected-language" class="form-control">
 
                     <?php foreach (getLanguages() as $lang): ?>
-                    <option value="<?php echo $lang->id; ?>"><?php echo $lang->name; ?> (<?php echo $lang->version; ?>)</option>
+                    <option value="<?php echo $lang->id; ?>"<?php echo (strcmp($lang->id, $prefferedLang) === 0 ? ' selected="selected"' : ''); ?>><?php echo $lang->name; ?> (<?php echo $lang->version; ?>)</option>
                     <?php endforeach; ?>
 
                 </select>
@@ -123,7 +135,7 @@ $prefferedProblem = @$_GET['p'];
 
             <div class="form-group">
                 <label for="comment">Zdrojový kód:</label>
-                <textarea class="form-control" rows="20" name="source-code" id="source-code"></textarea>
+                <textarea class="form-control" rows="20" name="source-code" id="source-code"><?php echo $prefferedSource; ?></textarea>
             </div>
 
             <input type="submit" class="btn btn-success btn-large" value="Odevzdat řešení"/>

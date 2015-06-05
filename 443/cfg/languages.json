@@ -1,10 +1,10 @@
 {
-  "python": "pyhton",
+  "python": "/usr/local/bin/python2.7",
   "gmcs": "gmcs",
   "mono": "mono",
-  "javac": "javac",
-  "java": "java",
-  "g++": "g++",
-  "gcc": "gcc",
+  "javac": "/etc/alternatives/java_sdk_1.8.0/bin/javac",
+  "java": "/etc/alternatives/java_sdk_1.8.0/bin/java",
+  "g++": "/opt/centos/devtoolset-1.1/root/usr/bin/g++",
+  "gcc": "/opt/centos/devtoolset-1.1/root/usr/bin/gcc",
   "fpc": "fpc"
 }

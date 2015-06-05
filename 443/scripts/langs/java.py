@@ -15,7 +15,7 @@ def compile (main_file, cfg):
 
     return cmd
 
-def run (comp_res, main_file, inn, out, err):
+def run (comp_res, main_file, cfg, inn, out, err):
     (root, ext) = os.path.splitext (main_file)
     basedir = os.path.dirname (root)
     commands = [

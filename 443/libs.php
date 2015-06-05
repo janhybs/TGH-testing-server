@@ -104,8 +104,9 @@ function copyJobFiles ($jobDir, $problemInfo, $langInfo, $user, $source, $attemp
 
     $filename           = 'main.' . $langInfo->extension;
     $sourceCodeLoc      = join_paths ($jobDir, $filename);
-    $resultFile         = join_paths ($jobDir, 'result.json') ;
-    $configFile         = join_paths ($jobDir, 'config.json') ;
+    $resultFile         = join_paths ($jobDir, 'result.json');
+    $configFile         = join_paths ($jobDir, 'config.json');
+    $serviceAlive       = join_paths ($jobDir, 'service.alive');
 
     mkdirs ($jobInputDir, 0777);
     mkdirs ($jobOutputDir, 0777);
@@ -138,9 +139,14 @@ function copyJobFiles ($jobDir, $problemInfo, $langInfo, $user, $source, $attemp
     $json->problem  = $problemInfo;
     $json->problem->input = $problemInfo->input;
   
+    # create json file, the file python is looking for
     $json_data = utf8_encode (json_encode($json));
     file_put_contents($configFile, $json_data);
+    file_put_contents($serviceAlive , 'delete-me');
+
+    # set permissions
     chmod ($configFile, 0777);
+    chmod ($serviceAlive, 0777);
 
     return $json;
 }
@@ -155,8 +161,8 @@ function copyResultFiles ($jobDir, $resultDir, $sourceFilename, $resultText) {
     $jobErrorFiles      =  scandir ($jobErrorDir);
     $jobErrorFiles      = array_diff ($jobErrorFiles, array('.', '..'));
 
-    $resultOutputDir   = join_paths ($resultDir, 'output');
-    $resultErrorDir    = join_paths ($resultDir, 'error');
+    $resultOutputDir   = $resultDir;
+    $resultErrorDir    = $resultDir;
 
     mkdirs ($resultOutputDir, 0775);
     mkdirs ($resultErrorDir,  0775);
@@ -187,6 +193,31 @@ function copyResultFiles ($jobDir, $resultDir, $sourceFilename, $resultText) {
 }
 
 function waitForResult ($configLoc, $resultLoc) {
+
+    # first step is to wait for python to delete service.alive which shouldn't take long
+    # maximum is check interval period which is by defaul 2 seconds
+    $wait = 0;
+    $serviceAliveParts = pathinfo ($configLoc);
+    $serviceAlive = join_paths ($serviceAliveParts['dirname'], 'service.alive');
+    $serviceIsDead = FALSE;
+    while ($wait < 8) {
+        if (!file_exists ($serviceAlive)) {
+            #file was successfully deleted
+            break;
+        } else {
+            $wait += 1;
+            sleep (1);
+        }
+    }
+
+    # still not deleted? service is probably not running
+    if (!file_exists ($serviceAlive)) {
+        # create file which should eventually start service
+        file_put_contents ('/var/www/html/tgh.nti.tul.cz/jobs/watchdog', 'delete-me');
+        $serviceIsDead = TRUE;
+    }
+
+
     $wait = 0;
     $sleep = .25;
     while ($wait < 60) {
@@ -217,8 +248,12 @@ function waitForResult ($configLoc, $resultLoc) {
     }
 
     # no response in 60sec
-    # something even worse happaned
-    return (object)array('exit' => -1, 'result' => 'Server did not respond within the timeout period');
+    # something even worse happened
+    if ($serviceIsDead) {
+        return (object)array('exit' => -1, 'result' => 'Server did not respond within the timeout period. <br />It means that there was issue on server. Please try again in couple minutes.<br />If problem remains, please contact <strong>jan.hybs (at) tul.cz</strong>');
+    }
+    return (object)array('exit' => -1, 'result' => 'Server did not respond within the timeout period. <br />It means that code execution took longer than 1 minute. <br />If problem remains, please contact <strong>jan.hybs (at) tul.cz</strong>');
+
 }
 
 function rrmdir($dir) { 
@@ -267,4 +302,28 @@ function showLogout ($user) {
         Logout <strong><?php echo $user->username; ?></strong>@<strong><?php echo $user->domain; ?></strong><br />
         <small><?php echo implode (', ', $user->groups); ?></small>
     <?php
+}
+
+
+function getFileSizeString ($filename) {
+    $size = @filesize ($filename);
+    if ($size === FALSE)
+        return 'file does not exists';
+
+    if ($size === 0)
+        return 'file is empty';
+
+    if ($size < 800)
+        return sprintf("%d B", $size);
+
+    if ($size < (100*1024))
+        return sprintf("%1.2f kB", $size / (1024));
+
+    if ($size < (100*1024*1024))
+        return sprintf("%1.2f MB", $size / (1024*1024));
+
+    if ($size < (100*1024*1024*1024))
+        return sprintf("%1.2f gB", $size / (1024*1024*1024));
+
+    return "file is too large";
 }

@@ -1,7 +1,7 @@
 RewriteEngine On
 RewriteRule      result  result.php  [L]
 RewriteRule      logout  logout.php  [L]
-#RewriteRule    secure  secure.php  [L]
+# RewriteRule    secure  secure.php  [L]
 
 
 # RewriteEngine On

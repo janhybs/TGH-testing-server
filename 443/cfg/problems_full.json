@@ -1,9 +1,40 @@
 {
+    "ARRMERGE": {
+        "id": "ARRMERGE",
+        "name": "Merge two sorted arrays",
+        "ref_script": "..\/generic",
+        "input": [
+            {
+                "id": "ARRMERGE_0",
+                "time": 60
+            },
+            {
+                "id": "ARRMERGE_1",
+                "time": 60
+            },
+            {
+                "id": "ARRMERGE_2",
+                "time": 60
+            },
+            {
+                "id": "ARRMERGE_3",
+                "time": 60
+            },
+            {
+                "id": "ARRMERGE_4",
+                "time": 60
+            }
+        ]
+    },
     "ELECTRIC": {
         "id": "ELECTRIC",
         "name": "Eletrika",
         "ref_script": "..\/generic",
         "input": [
+            {
+                "id": "ELECTRIC_0",
+                "time": 60
+            },
             {
                 "id": "ELECTRIC_1",
                 "time": 60
@@ -14,11 +45,34 @@
             }
         ]
     },
+    "GOSTRVI": {
+        "id": "GOSTRVI",
+        "name": "Google Street View",
+        "ref_script": "..\/generic",
+        "input": [
+            {
+                "id": "GOSTRVI_0",
+                "time": 60
+            },
+            {
+                "id": "GOSTRVI_1",
+                "time": 60
+            },
+            {
+                "id": "GOSTRVI_2",
+                "time": 60
+            }
+        ]
+    },
     "IDOS": {
         "id": "IDOS",
         "name": "IDOS",
         "ref_script": "..\/generic",
         "input": [
+            {
+                "id": "IDOS_0",
+                "time": 60
+            },
             {
                 "id": "IDOS_1",
                 "time": 60
@@ -34,6 +88,10 @@
         "name": "Bludiste",
         "ref_script": "..\/generic",
         "input": [
+            {
+                "id": "MINOS_0",
+                "time": 60
+            },
             {
                 "id": "MINOS_1",
                 "time": 60
@@ -62,6 +120,10 @@
         "ref_script": "..\/generic",
         "input": [
             {
+                "id": "MINSPILL_0",
+                "time": 60
+            },
+            {
                 "id": "MINSPILL_1",
                 "time": 60
             },
@@ -76,6 +138,10 @@
         "name": "Nejspolehlivejsi cesta",
         "ref_script": "..\/generic",
         "input": [
+            {
+                "id": "RELCONN_0",
+                "time": 60
+            },
             {
                 "id": "RELCONN_1",
                 "time": 60
@@ -103,6 +169,10 @@
         "ref_script": "..\/generic",
         "input": [
             {
+                "id": "SUDOGOB_0",
+                "time": 60
+            },
+            {
                 "id": "SUDOGOB_1",
                 "time": 60
             },
@@ -119,6 +189,33 @@
         "input": [
             {
                 "id": "1",
+                "time": 60
+            }
+        ]
+    },
+    "TWOMISS": {
+        "id": "TWOMISS",
+        "name": "Two missing from a sequence",
+        "ref_script": "..\/generic",
+        "input": [
+            {
+                "id": "TWOMISS_0",
+                "time": 60
+            },
+            {
+                "id": "TWOMISS_1",
+                "time": 60
+            },
+            {
+                "id": "TWOMISS_2",
+                "time": 60
+            },
+            {
+                "id": "TWOMISS_3",
+                "time": 60
+            },
+            {
+                "id": "TWOMISS_4",
                 "time": 60
             }
         ]

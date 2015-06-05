@@ -226,9 +226,6 @@ def compare (a, b):
             l2 = f2.readline ()
             eof = l1 == ''
 
-            print l1, ': ', ':'.join(x.encode('hex') for x in l1)
-            print l2, ': ', ':'.join(x.encode('hex') for x in l2)
-
             # right strip white chars (\r\n, \n, \r, max differ)
             l1 = l1.rstrip()
             l2 = l2.rstrip()
@@ -385,6 +382,8 @@ class TGHCheckDaemon(Daemon):
             print jobs
             for current_job in jobs:
                 config_path = os.path.join (self.dir_to_watch, current_job, 'config.json')
+                service_alive = os.path.join (self.dir_to_watch, current_job, 'service.alive')
+
                 if os.path.exists (config_path) and os.path.isfile (config_path):
                     try:
                         with open (config_path, 'r') as f:
@@ -395,6 +394,8 @@ class TGHCheckDaemon(Daemon):
 
                     if config:
                         print 'valid job detected'
+                        # remove flag as soon as possible
+                        os.remove (service_alive)
                         try:
                             (result_file, result) = process (config)
                             print result['result']
@@ -433,7 +434,7 @@ if __name__ == "__main__":
         print 'You cannot run this daemon as root'
         print 'Use command su - <username> to run this daemon or add command --force if you are certain'
         sys.exit(1)
-
+    
     if options.languages is not None:
         with open (options.languages) as f:
             LANGUAGES = json.load (f)
@@ -454,3 +455,4 @@ if __name__ == "__main__":
         daemon.set_args (options.dir_to_watch, options.force)
         daemon.run ()
     sys.exit (0)
+
